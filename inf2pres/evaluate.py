@@ -21,9 +21,7 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     sum_rmse = 0.0    
     confusion = torch.zeros(len(sve_kategorije), len(sve_kategorije))    
     
-    
-    
-    print("Final evaluation on test set",)
+    # evaluate model   
     model.eval()
     test_data_x = [get_pad_chars(words2charindices(d[0]),max_word_length, char_pad_token) for d in test_set]
     test_data_y = [int(d[1]) for d in test_set]
@@ -41,13 +39,14 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     microf1 = f1_score(test_data_y, pred, average='macro')
     macrof1 = f1_score(test_data_y, pred, average='micro')
     weightedf1 = f1_score(test_data_y, pred, average='weighted')
-    print("test loss %.3f, test accuracy %.3f, test rmse %.3f, test microF1 %.3f, test macroF1 %.3f, test weightedF1 %.3f" % (sum_loss/total, correct/total, sum_rmse/total, microf1, macrof1, weightedf1))
+    print(" --------------Evaluation metrics: ---------------------- \
+          \n\r * test loss: %.3f\n\r * test accuracy: %.3f,\n\r * test rmse: %.3f,\n\r * test microF1: %.3f,\n\r * test macroF1: %.3f,\n\r * test weightedF1: %.3f" % (sum_loss/total, correct/total, sum_rmse/total, microf1, macrof1, weightedf1))
 
     # Normalizacija dijeljenjem svakog retka sumom tog retka.
     for i in range(len(sve_kategorije)):
         confusion[i] = confusion[i] / confusion[i].sum()
 
-    print(confusion)
+    #print(confusion)
 
     # Definiranje grafa
     fig = plt.figure()
@@ -64,7 +63,7 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
 
     # sphinx_gallery_thumbnail_number = 2
-    plt.show()
+    return plt.show()
 
 def heatmapZaKlasu(glagol,v2,klasa, model):
     pad = []
