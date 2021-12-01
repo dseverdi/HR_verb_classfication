@@ -109,3 +109,34 @@ def heatmap(glagol, model):
     pred_klase = torch.max(pred, 1)[1]
     print('infinitiv završava na:',klase_infinitiv[pred_klase.item()])
     heatmapZaKlasu(glagol,vekt,pred_klase,model)
+    
+    
+def predict(model, glagol):
+    model.eval()
+    vekt = torch.from_numpy(np.array(get_pad_chars(words2charindices(glagol),max_word_length, char_pad_token))).long()
+    pred = model(vekt.unsqueeze(dim=0))    
+    pred_klase = torch.topk(pred, 2)[1].squeeze(dim=0)        
+    return klase_prezent[pred_klase[0].item()],klase_prezent[pred_klase[1].item()]
+    
+    
+   
+    
+params = {
+    "embed_size"     : 300,        
+    "n_classes"      : 5,
+    "vocab_len"      : vocab_len,
+    "filter_sizes" : [1,2,3,5],
+    "num_filters"  : 36,
+    "dropout_rate" : 0.1    
+}
+
+params["weight_matrix"] = torch.from_numpy(np.zeros((len(char_list)+1, params["embed_size"]))).float()
+    
+    
+def loadModel(model_path = 'results/20211117_193445/model.weights'):
+    # define model
+    global params
+    model = CNN_Text(**params)    
+    model.load_state_dict(torch.load(model_path))
+    
+    return model

@@ -112,7 +112,15 @@ def heatmap(model, glagol):
     #print(pred)
     pred_klase = torch.max(pred, 1)[1]
     print('prezent završava na:',klase_prezent[pred_klase.item()])
-    heatmapZaKlasu(glagol,vekt,pred_klase,model)
+    return heatmapZaKlasu(glagol,vekt,pred_klase,model)
+    
+    
+def predict(model, glagol):
+    model.eval()
+    vekt = torch.from_numpy(np.array(get_pad_chars(words2charindices(glagol),max_word_length, char_pad_token))).long()
+    pred = model(vekt.unsqueeze(dim=0))    
+    pred_klase = torch.topk(pred, 2)[1].squeeze(dim=0)        
+    return klase_prezent[pred_klase[0].item()],klase_prezent[pred_klase[1].item()]
     
     
    
