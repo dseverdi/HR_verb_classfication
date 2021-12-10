@@ -50,6 +50,9 @@ def getWeightsMatrix(char_list, ft):
 def ucitajPodatke(path=''):
     """Učitava glagole u skupove za treniranje, validaciju i testiranje.
     path treba biti u obliku putanja_do_fileova i obvezno na kraju /."""
+    
+    
+    
     glagoli_train_file = open(path+'glagoli_train.txt')
     train_set = []
     sve_kategorije = []

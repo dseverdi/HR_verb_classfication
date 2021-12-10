@@ -8,17 +8,23 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import math
-from utils import get_pad_chars, words2charindices, max_word_length, char_pad_token, nazivi, klase_infinitiv
+from .utils import get_pad_chars, words2charindices, max_word_length, char_pad_token, nazivi, klase_infinitiv, char_list,vocab_len
+from .CNNTextClassifier import CNN_Text
 
-def evaluateOnTestSet(model, params_outputh_path, test_set,sve_kategorije):
-    correct = 0
-    total = 0
+from typing import Any
+
+import seaborn as sn
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
+    correct  = 0
+    total    = 0
     sum_loss = 0.0
-    sum_rmse = 0.0
-    confusion = torch.zeros(len(sve_kategorije), len(sve_kategorije))
-    output_path = params_outputh_path
-    model.load_state_dict(torch.load(output_path))
-    print("Final evaluation on test set",)
+    sum_rmse = 0.0    
+    confusion = torch.zeros(len(sve_kategorije), len(sve_kategorije))    
+    
+    # evaluate model   
     model.eval()
     test_data_x = [get_pad_chars(words2charindices(d[0]),max_word_length, char_pad_token) for d in test_set]
     test_data_y = [int(d[1]) for d in test_set]
@@ -36,30 +42,27 @@ def evaluateOnTestSet(model, params_outputh_path, test_set,sve_kategorije):
     microf1 = f1_score(test_data_y, pred, average='macro')
     macrof1 = f1_score(test_data_y, pred, average='micro')
     weightedf1 = f1_score(test_data_y, pred, average='weighted')
-    print("test loss %.3f, test accuracy %.3f, test rmse %.3f, test microF1 %.3f, test macroF1 %.3f, test weightedF1 %.3f" % (sum_loss/total, correct/total, sum_rmse/total, microf1, macrof1, weightedf1))
-
+    print(" --------------Evaluation metrics: ---------------------- \
+          \n\r * test loss: %.3f\n\r * test accuracy: %.3f,\n\r * test rmse: %.3f,\n\r * test microF1: %.3f,\n\r * test macroF1: %.3f,\n\r * test weightedF1: %.3f" % (sum_loss/total, correct/total, sum_rmse/total, microf1, macrof1, weightedf1))
+    
+    
     # Normalizacija dijeljenjem svakog retka sumom tog retka.
     for i in range(len(sve_kategorije)):
         confusion[i] = confusion[i] / confusion[i].sum()
 
-    print(confusion)
+        
+    # Definiranje prikaza matrice zbunjenosti   
+    size = len(nazivi)    
+    df_cm = pd.DataFrame(confusion.numpy(), range(size), range(size))
+    fig = plt.figure(figsize=(10,7))
+    sn.set(font_scale=1.4) # for label size
+    ax = sn.heatmap(df_cm,cmap="viridis", annot=True, annot_kws={"size": 14}) # font size
+    
+    # Postavljanje osi    
+    ax.set_xticklabels( nazivi, rotation=90)
+    ax.set_yticklabels(nazivi)
 
-    # Definiranje grafa
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(confusion.numpy())
-    fig.colorbar(cax)
-
-    # Postavljanje osi
-    ax.set_xticklabels([''] + nazivi, rotation=90)
-    ax.set_yticklabels([''] + nazivi)
-
-    # Prikaz oznake na svakoj vrijednosti
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
-
-    # sphinx_gallery_thumbnail_number = 2
-    plt.show()
+    return plt.show()
 
 def heatmapZaKlasu(glagol,v2,klasa, model):
     pad = []
@@ -86,19 +89,25 @@ def heatmapZaKlasu(glagol,v2,klasa, model):
         hm.append(mp)
 
     hm = sum(hm)
-    odrezaniHeatmap = hm.detach().squeeze(0)[:,:len(glagol)]
+    odrezaniHeatmap = hm.detach().squeeze(0)[:,:len(glagol)].numpy()
+   
 
     fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(odrezaniHeatmap)
+    ax = fig.add_subplot(111)    
+    cax = ax.matshow(odrezaniHeatmap,cmap='viridis')
 
     # Postavljanje osi
     nazivi=list(glagol)
+    ax.grid(False)
     ax.set_xticklabels([''] + nazivi)
     ax.set_yticklabels([])
 
     # Prikaz oznake na svakoj vrijednosti
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    
+    # store to tikz
+    import tikzplotlib
+    tikzplotlib.save("mytikz.tex")
     plt.show()
 
 def heatmap(glagol, model):
@@ -107,23 +116,13 @@ def heatmap(glagol, model):
     pred = model(vekt.unsqueeze(dim=0))
     #print(pred)
     pred_klase = torch.max(pred, 1)[1]
-    print('infinitiv završava na:',klase_infinitiv[pred_klase.item()])
+    print('PRES2INF class:',klase_infinitiv[pred_klase.item()])
     heatmapZaKlasu(glagol,vekt,pred_klase,model)
     
     
-def predict(model, glagol):
-    model.eval()
-    vekt = torch.from_numpy(np.array(get_pad_chars(words2charindices(glagol),max_word_length, char_pad_token))).long()
-    pred = model(vekt.unsqueeze(dim=0))    
-    pred_klase = torch.topk(pred, 2)[1].squeeze(dim=0)        
-    return klase_prezent[pred_klase[0].item()],klase_prezent[pred_klase[1].item()]
-    
-    
-   
-    
 params = {
     "embed_size"     : 300,        
-    "n_classes"      : 5,
+    "n_classes"      : 7,
     "vocab_len"      : vocab_len,
     "filter_sizes" : [1,2,3,5],
     "num_filters"  : 36,

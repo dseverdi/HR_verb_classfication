@@ -24,7 +24,7 @@ def getBatch(batch_size, train_data):
         batch = [train_data_x[sindex:], train_data_y[sindex:]]
         yield batch
         
-def train_model(model, train, val, output_path, batch_size = 100, epochs=10, lr=0.001):
+def train_model(model, train, val, output_path, batch_size = 100, epochs=10, lr=0.001, device="cuda"):
     parameters = filter(lambda p: p.requires_grad, model.parameters())
     optimizer = torch.optim.Adam(parameters, lr=lr)
     best_val_loss = 1e10
@@ -36,8 +36,8 @@ def train_model(model, train, val, output_path, batch_size = 100, epochs=10, lr=
         sum_loss = 0.0
         total = 0
         for j, [train_x, train_y] in enumerate(getBatch(batch_size, train)):
-            x = torch.from_numpy(np.array(train_x)).long()
-            y = torch.from_numpy(np.array(train_y)).long()
+            x = torch.from_numpy(np.array(train_x)).long().to(device)
+            y = torch.from_numpy(np.array(train_y)).long().to(device)
             y_pred = model(x)
             optimizer.zero_grad()
             loss = F.cross_entropy(y_pred, y)
@@ -56,22 +56,22 @@ def train_model(model, train, val, output_path, batch_size = 100, epochs=10, lr=
             print("train loss %.3f, val loss %.3f, val accuracy %.3f, and val rmse %.3f" % (sum_loss/total, val_loss, val_acc, val_rmse))
     return bestModelSumLoss, best_val_loss, bestModelValAcc, bestModelValRmse
 
-def validation_metrics (model, val_set, batch_size):
+def validation_metrics (model, val_set, batch_size, device="cuda"):
     model.eval()
     correct = 0
     total = 0
     sum_loss = 0.0
     sum_rmse = 0.0
     for i, [val_x, val_y] in enumerate(getBatch(batch_size, val_set)):
-        x = torch.from_numpy(np.array(val_x)).long()
-        y = torch.from_numpy(np.array(val_y)).long()
+        x = torch.from_numpy(np.array(val_x)).long().to(device)
+        y = torch.from_numpy(np.array(val_y)).long().to(device)
         y_hat = model(x)
         loss = F.cross_entropy(y_hat, y)
         pred = torch.max(y_hat, 1)[1]
         correct += (pred == y).float().sum()
         total += y.shape[0]
         sum_loss += loss.item()*y.shape[0]
-        sum_rmse += np.sqrt(mean_squared_error(pred, y.unsqueeze(-1)))*y.shape[0]
+        sum_rmse += np.sqrt(mean_squared_error(pred.to("cpu"), y.to("cpu").unsqueeze(-1)))*y.shape[0]
     return sum_loss/total, correct/total, sum_rmse/total
 
 

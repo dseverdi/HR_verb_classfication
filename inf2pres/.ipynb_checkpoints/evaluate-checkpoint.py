@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import math
 
+import seaborn as sn
+import pandas as pd
+import matplotlib.pyplot as plt
+
 from .utils import get_pad_chars, words2charindices, max_word_length, char_pad_token, nazivi, klase_prezent, char_list, vocab_len
 from .CNNTextClassifier import CNN_Text
 
@@ -19,6 +23,8 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     total    = 0
     sum_loss = 0.0
     sum_rmse = 0.0    
+    
+        
     confusion = torch.zeros(len(sve_kategorije), len(sve_kategorije))    
     
     # evaluate model   
@@ -29,7 +35,7 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     test_data_y = torch.from_numpy(np.array(test_data_y)).long()
     y_hat = model.forward(test_data_x)
     loss = F.cross_entropy(y_hat, test_data_y)
-    pred = torch.max(y_hat, 1)[1]
+    pred = torch.max(y_hat, 1)[1]    
     correct += (pred == test_data_y).float().sum()
     for i in range(len(pred)):
         confusion[pred[i]][test_data_y[i]] += 1
@@ -41,28 +47,27 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     weightedf1 = f1_score(test_data_y, pred, average='weighted')
     print(" --------------Evaluation metrics: ---------------------- \
           \n\r * test loss: %.3f\n\r * test accuracy: %.3f,\n\r * test rmse: %.3f,\n\r * test microF1: %.3f,\n\r * test macroF1: %.3f,\n\r * test weightedF1: %.3f" % (sum_loss/total, correct/total, sum_rmse/total, microf1, macrof1, weightedf1))
-
+    
+    
     # Normalizacija dijeljenjem svakog retka sumom tog retka.
     for i in range(len(sve_kategorije)):
         confusion[i] = confusion[i] / confusion[i].sum()
 
-    #print(confusion)
+        
+    # Definiranje prikaza matrice zbunjenosti   
+    size = len(nazivi)    
+    df_cm = pd.DataFrame(confusion.numpy(), range(size), range(size))
+    fig = plt.figure(figsize=(10,7))
+    sn.set(font_scale=1.4) # for label size
+    ax = sn.heatmap(df_cm,cmap="viridis", annot=True, annot_kws={"size": 14}) # font size
+    
+    # Postavljanje osi    
+    ax.set_xticklabels( nazivi, rotation=90)
+    ax.set_yticklabels(nazivi)
+    
+    #ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    #ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
 
-    # Definiranje grafa
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(confusion.numpy())
-    fig.colorbar(cax)
-
-    # Postavljanje osi
-    ax.set_xticklabels([''] + nazivi, rotation=90)
-    ax.set_yticklabels([''] + nazivi)
-
-    # Prikaz oznake na svakoj vrijednosti
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
-
-    # sphinx_gallery_thumbnail_number = 2
     return plt.show()
 
 def heatmapZaKlasu(glagol,v2,klasa, model):
@@ -90,20 +95,24 @@ def heatmapZaKlasu(glagol,v2,klasa, model):
         hm.append(mp)
 
     hm = sum(hm)
-    odrezaniHeatmap = hm.detach().squeeze(0)[:,:len(glagol)]
+    odrezaniHeatmap = hm.detach().squeeze(0)[:,:len(glagol)].numpy()
+   
 
     fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(odrezaniHeatmap)
+    fig.tight_layout()
+    #plt.figure(figsize=(15,10))
+    ax = fig.add_subplot(111)    
+    cax = ax.matshow(odrezaniHeatmap,cmap='viridis')
 
     # Postavljanje osi
     nazivi=list(glagol)
+    ax.grid(False)
     ax.set_xticklabels([''] + nazivi)
     ax.set_yticklabels([])
 
     # Prikaz oznake na svakoj vrijednosti
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    plt.show()
+    return plt.show()
 
 def heatmap(model, glagol):
     model.eval()
@@ -111,7 +120,7 @@ def heatmap(model, glagol):
     pred = model(vekt.unsqueeze(dim=0))
     #print(pred)
     pred_klase = torch.max(pred, 1)[1]
-    print('prezent završava na:',klase_prezent[pred_klase.item()])
+    print('INF2PRES class:',klase_prezent[pred_klase.item()])
     return heatmapZaKlasu(glagol,vekt,pred_klase,model)
     
     

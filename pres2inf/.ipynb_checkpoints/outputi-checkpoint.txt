@@ -1,0 +1,4 @@
+batch_size: 50, filter_sizes: [1, 2, 3, 5], num_filters: 36, dropout_rate: 0.100000, learning_rate: 0.005000 
+batch_size: 50, filter_sizes: [1, 2, 3, 5], num_filters: 36, dropout_rate: 0.100000, learning_rate: 0.005000 
+nakon svih foldova: train loss 0.016, val loss 0.001, val accuracy 1.000, and val rmse 0.003 
+ 
