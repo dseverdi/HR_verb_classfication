@@ -11,6 +11,8 @@ import math
 from .utils import get_pad_chars, words2charindices, max_word_length, char_pad_token, nazivi, klase_infinitiv, char_list,vocab_len
 from .CNNTextClassifier import CNN_Text
 
+from collections import OrderedDict
+
 from typing import Any
 
 import seaborn as sn
@@ -56,12 +58,13 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     df_cm = pd.DataFrame(confusion.numpy(), range(size), range(size))
     fig = plt.figure(figsize=(10,7))
     sn.set(font_scale=1.4) # for label size
-    ax = sn.heatmap(df_cm,cmap="viridis", annot=True, annot_kws={"size": 14}) # font size
+    ax = sn.heatmap(df_cm,cmap="viridis", annot=True, annot_kws={"size": 16}) # font size
     
     # Postavljanje osi    
     ax.set_xticklabels( nazivi, rotation=90)
     ax.set_yticklabels(nazivi)
 
+    plt.savefig('pres2inf_confusion.png')
     return plt.show()
 
 def heatmapZaKlasu(glagol,v2,klasa, model):
@@ -103,11 +106,8 @@ def heatmapZaKlasu(glagol,v2,klasa, model):
     ax.set_yticklabels([])
 
     # Prikaz oznake na svakoj vrijednosti
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    
-    # store to tikz
-    import tikzplotlib
-    tikzplotlib.save("mytikz.tex")
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))    
+   
     plt.show()
 
 def heatmap(glagol, model):
@@ -122,7 +122,7 @@ def heatmap(glagol, model):
     
 params = {
     "embed_size"     : 300,        
-    "n_classes"      : 7,
+    "n_classes"      : 8,
     "vocab_len"      : vocab_len,
     "filter_sizes" : [1,2,3,5],
     "num_filters"  : 36,
@@ -131,11 +131,31 @@ params = {
 
 params["weight_matrix"] = torch.from_numpy(np.zeros((len(char_list)+1, params["embed_size"]))).float()
     
-    
-def loadModel(model_path = 'results/20211117_193445/model.weights'):
+def predict(model, glagol):
+    model.eval()
+    vekt = torch.from_numpy(np.array(get_pad_chars(words2charindices(glagol),max_word_length, char_pad_token))).long()
+    pred = model(vekt.unsqueeze(dim=0))    
+    pred_klase = torch.topk(pred, 2)[1].squeeze(dim=0)        
+    return klase_infinitiv[pred_klase[0].item()]    
+
+
+def loadModel(model_path = 'results/model.weights'):
     # define model
     global params
     model = CNN_Text(**params)    
     model.load_state_dict(torch.load(model_path))
     
     return model
+
+def probabilities(model : Any, glagol : str) -> None:
+    model.eval()
+    vekt = torch.from_numpy(np.array(get_pad_chars(words2charindices(glagol),max_word_length, char_pad_token))).long()
+    pred = model(vekt.unsqueeze(dim=0))
+    poz = torch.add(pred,-pred.min().item())
+    vjer = torch.div(poz,poz.sum().item())
+    
+    probs = {klase_infinitiv[k] : round(v,3)  for (k,v) in enumerate(vjer[0].detach().tolist())}
+                                             
+    return dict(OrderedDict(sorted(probs.items(), key=lambda kv: kv[1],reverse=True)))
+    
+    

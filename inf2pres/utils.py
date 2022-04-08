@@ -12,8 +12,8 @@ def ucitajFasttext(path):
 char_pad_token = 0
 max_word_length = 20
 
-klase_prezent = {0: 'am', 1: 'im', 2:'ijem', 3:'jem', 4:'em'}
-nazivi = ['am', 'im', 'ijem', 'jem', 'em']
+klase_prezent = {0: 'am', 1: 'im', 2:'jem', 3:'em'}
+nazivi = ['am', 'im', 'jem', 'em']
 
 char_list = list("""abcčćdđefghijklmnoprsštuvzž""")
 char2id = dict() # Pretvara znakove u cijele brojeve

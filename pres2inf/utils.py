@@ -12,8 +12,8 @@ def ucitajFasttext(path):
 char_pad_token = 0
 max_word_length = 20
 
-klase_infinitiv = {0: 'ati', 1: 'iti', 2:'ijeti', 3:'jeti', 4:'eti', 5:'uti', 6:'ći'}
-nazivi = ['ati', 'iti', 'ijeti', 'jeti', 'eti', 'uti', 'ći']
+klase_infinitiv = {0: 'ati', 1: 'iti', 2:'jeti', 3:'eti', 4:'uti', 5:'sti', 6:'rti', 7:'ći'}
+nazivi = ['ati', 'iti', 'jeti', 'eti', 'uti', 'sti', 'rti', 'ći']
 
 char_list = list("""abcčćdđefghijklmnoprsštuvzž""")
 char2id = dict() # Pretvara znakove u cijele brojeve
@@ -50,10 +50,7 @@ def getWeightsMatrix(char_list, ft):
 def ucitajPodatke(path=''):
     """Učitava glagole u skupove za treniranje, validaciju i testiranje.
     path treba biti u obliku putanja_do_fileova i obvezno na kraju /."""
-    
-    
-    
-    glagoli_train_file = open(path+'glagoli_train.txt')
+    glagoli_train_file = open(path+'train.txt')
     train_set = []
     sve_kategorije = []
 
@@ -66,7 +63,7 @@ def ucitajPodatke(path=''):
 
     glagoli_train_file.close()
 
-    glagoli_val_file = open(path+'glagoli_validation.txt')
+    glagoli_val_file = open(path+'dev.txt')
     val_set = []
 
     for line in glagoli_val_file:
@@ -75,7 +72,7 @@ def ucitajPodatke(path=''):
 
     glagoli_val_file.close()
 
-    glagoli_test_file = open(path+'glagoli_test.txt')
+    glagoli_test_file = open(path+'test.txt')
     test_set = []
 
     for line in glagoli_test_file:
