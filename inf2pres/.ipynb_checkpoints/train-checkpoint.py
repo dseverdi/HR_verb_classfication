@@ -40,6 +40,8 @@ def train_model(model, train, val, output_path, batch_size = 100, epochs=10, lr=
             y = torch.from_numpy(np.array(train_y)).long()
             y_pred = model(x)
             optimizer.zero_grad()
+            #import pdb
+            #pdb.set_trace()
             loss = F.cross_entropy(y_pred, y)
             loss.backward()
             optimizer.step()

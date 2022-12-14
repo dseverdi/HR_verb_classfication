@@ -40,10 +40,10 @@ hiperparametri = {'hp1':[25, [1, 2, 3, 5], 36, 0.1, 0.005], 'hp2':[50, [1, 2, 3,
 
 best = 1e10
 najbolji_path = ''
-train_set, val_set, test_set, sve_kategorije = ucitajPodatke('../')
-out_size=len(sve_kategorije)
+train_set, val_set, test_set, all_categories = loadData('../')
+out_size=len(all_categories)
 
-ft = ucitajFasttext('../../')
+ft = loadFastText('../../')
 weights_matrix = getWeightsMatrix(char_list,ft)
 
 train_set_cv = train_set

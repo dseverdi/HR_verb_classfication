@@ -9,24 +9,52 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import math
 
-import seaborn as sn
-import pandas as pd
-import matplotlib.pyplot as plt
 from collections import OrderedDict
 
-from .utils import get_pad_chars, words2charindices, max_word_length, char_pad_token, nazivi, klase_prezent, char_list, vocab_len
+from .utils import get_pad_chars, words2charindices, max_word_length, char_pad_token, suffixes, class_present, char_list, vocab_len
 from .CNNTextClassifier import CNN_Text
+#from utils import get_pad_chars, words2charindices, max_word_length, char_pad_token, suffixes, class_present, char_list, vocab_len
+#from CNNTextClassifier import CNN_Text
 
 from typing import Any
 
-def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
+
+import seaborn as sn
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+
+# model metaparameters
+cnn_4_params = {
+    "embed_size"     : 300,        
+    "n_classes"      : 4,
+    "vocab_len"      : vocab_len,
+    "filter_sizes" : [1,2,3,5],
+    "num_filters"  : 36,
+    "dropout_rate" : 0.1    
+}
+
+cnn_1_params = {
+    "embed_size"     : 300,        
+    "n_classes"      : 4,
+    "vocab_len"      : vocab_len,
+    "filter_sizes" : [5],
+    "num_filters"  : 36,
+    "dropout_rate" : 0.1    
+}
+
+
+
+# evaluations
+def evaluateOnTestSet(model : Any,test_set : str,all_categories : list):
     correct  = 0
     total    = 0
     sum_loss = 0.0
     sum_rmse = 0.0
     
             
-    confusion = torch.zeros(len(sve_kategorije), len(sve_kategorije))    
+    confusion = torch.zeros(len(all_categories), len(all_categories))    
     
     # evaluate model   
     model.eval()
@@ -44,28 +72,28 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
     total += test_data_y.shape[0]
     sum_loss += loss.item()*test_data_y.shape[0]
     sum_rmse += np.sqrt(mean_squared_error(pred, test_data_y.unsqueeze(-1)))*test_data_y.shape[0]
-    microf1 = f1_score(test_data_y, pred, average='macro')
-    macrof1 = f1_score(test_data_y, pred, average='micro')
-    weightedf1 = f1_score(test_data_y, pred, average='weighted')
+    micro_f1 = f1_score(test_data_y, pred, average='micro')
+    macro_f1 = f1_score(test_data_y, pred, average='macro')
+    weighted_f1 = f1_score(test_data_y, pred, average='weighted')
     print(" --------------Evaluation metrics: ---------------------- \
-          \n\r * test loss: %.3f\n\r * test accuracy: %.3f,\n\r * test rmse: %.3f,\n\r * test microF1: %.3f,\n\r * test macroF1: %.3f,\n\r * test weightedF1: %.3f" % (sum_loss/total, correct/total, sum_rmse/total, microf1, macrof1, weightedf1))
+          \n\r * test loss: %.3f\n\r * test accuracy: %.3f,\n\r * test rmse: %.3f,\n\r * test microF1: %.3f,\n\r * test macroF1: %.3f,\n\r * test weightedF1: %.3f" % (sum_loss/total, correct/total, sum_rmse/total, micro_f1, macro_f1, weighted_f1))
     
     
     # Normalizacija dijeljenjem svakog retka sumom tog retka.
-    for i in range(len(sve_kategorije)):
+    for i in range(len(all_categories)):
         confusion[i] = confusion[i] / confusion[i].sum()
 
     
     # Definiranje prikaza matrice zbunjenosti   
-    size = len(nazivi)    
+    size = len(suffixes)    
     df_cm = pd.DataFrame(confusion.numpy(), range(size), range(size))
     fig = plt.figure(figsize=(10,7))
     sn.set(font_scale=1.4) # for label size
     ax = sn.heatmap(df_cm,cmap="viridis", annot=True, annot_kws={"size": 18}) # font size
     
     # Postavljanje osi    
-    ax.set_xticklabels( nazivi, rotation=90)
-    ax.set_yticklabels(nazivi)
+    ax.set_xticklabels( suffixes, rotation=90)
+    ax.set_yticklabels(suffixes)
     
     #ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
     #ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
@@ -74,8 +102,12 @@ def evaluateOnTestSet(model : Any,test_set : str,sve_kategorije : list):
 
     return plt.show()
 
-def heatmapZaKlasu(glagol,v2,klasa, model):
+
+
+def class_heatmap(glagol,v2,klasa, model):
+    
     pad = []
+
     for conv in model.convs1:
         pad.append(conv.kernel_size[0])
     x = []
@@ -102,20 +134,23 @@ def heatmapZaKlasu(glagol,v2,klasa, model):
     odrezaniHeatmap = hm.detach().squeeze(0)[:,:len(glagol)].numpy()
    
 
-    fig = plt.figure()
-    fig.tight_layout()
+    fig = plt.figure()    
     #plt.figure(figsize=(15,10))
     ax = fig.add_subplot(111)    
-    cax = ax.matshow(odrezaniHeatmap,cmap='viridis')
-
+    cax = ax.matshow(odrezaniHeatmap,cmap='viridis')    
+    
     # Postavljanje osi
-    nazivi=list(glagol)
+    suffixes=list(glagol)
     ax.grid(False)
-    ax.set_xticklabels([''] + nazivi)
+    ax.set_xticklabels([''] + suffixes)
+    
+    # turn off ticks
+    ax.tick_params(left=False, bottom=True) ## other options are right and top
     ax.set_yticklabels([])
 
     # Prikaz oznake na svakoj vrijednosti
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    
     return plt.show()
 
 def heatmap(model, glagol):
@@ -124,8 +159,8 @@ def heatmap(model, glagol):
     pred = model(vekt.unsqueeze(dim=0))
     #print(pred)
     pred_klase = torch.max(pred, 1)[1]
-    print('INF2PRES class:',klase_prezent[pred_klase.item()])
-    return heatmapZaKlasu(glagol,vekt,pred_klase,model)
+    print('INF2PRES class:',class_present[pred_klase.item()])
+    return class_heatmap(glagol,vekt,pred_klase,model)
     
     
 def predict(model, glagol):
@@ -133,27 +168,21 @@ def predict(model, glagol):
     vekt = torch.from_numpy(np.array(get_pad_chars(words2charindices(glagol),max_word_length, char_pad_token))).long()
     pred = model(vekt.unsqueeze(dim=0))    
     pred_klase = torch.topk(pred, 2)[1].squeeze(dim=0)        
-    return klase_prezent[pred_klase[0].item()]
+    return class_present[pred_klase[0].item()]
     
     
    
     
-params = {
-    "embed_size"     : 300,        
-    "n_classes"      : 4,
-    "vocab_len"      : vocab_len,
-    "filter_sizes" : [1,2,3,5],
-    "num_filters"  : 36,
-    "dropout_rate" : 0.1    
-}
 
-params["weight_matrix"] = torch.from_numpy(np.zeros((len(char_list)+1, params["embed_size"]))).float()
     
     
-def loadModel(model_path = 'results/20211208_162956/model.weights'):
+def loadModel(model_path = 'results/20211208_162956/model.weights', params = cnn_4_params):
     # define model
-    global params
+    # intialize weight matrix
+    params["weight_matrix"] = torch.from_numpy(np.zeros((len(char_list)+1, params["embed_size"]))).float()
+    
     model = CNN_Text(**params)    
+    
     model.load_state_dict(torch.load(model_path))
     
     return model
@@ -166,7 +195,7 @@ def probabilities(model : Any, glagol : str) -> None:
     poz = torch.add(pred,-pred.min().item())
     vjer = torch.div(poz,poz.sum().item())
     
-    probs = {klase_prezent[k] : round(v,3) for (k,v) in enumerate(vjer[0].detach().tolist())}
+    probs = {class_present[k] : round(v,3) for (k,v) in enumerate(vjer[0].detach().tolist())}
                                              
     return dict(OrderedDict(sorted(probs.items(), key=lambda kv: kv[1],reverse=True)))
     
